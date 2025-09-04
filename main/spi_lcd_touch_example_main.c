@@ -41,6 +41,7 @@
 #include "uptime_kuma.h"
 #include "uptime_kuma_ui.h"
 #include "landing_page.h"
+#include "main_ui.h"
 
 static const char *TAG = "example";
 
@@ -101,7 +102,7 @@ static void ui_event_handler(lv_event_t * e)
     } else if (code == EVT_SWITCH_TO_KUMA_UI) {
         ESP_LOGI(TAG, "Switching to Uptime Kuma UI");
         wifi_success_ui_show(false);
-        uptime_kuma_ui_show(true);
+        main_ui_show(true);
 
         // Start the Kuma client task if it's not already running
         if (kuma_task_handle == NULL) {
@@ -460,13 +461,13 @@ void app_main(void)
 
     create_wifi_config_ui(disp);
     create_wifi_success_ui(lv_scr_act());
-    create_uptime_kuma_ui(lv_scr_act());
+    create_main_ui(lv_scr_act());
     create_landing_page_ui(lv_scr_act());
 
     // Initially, show only the landing page
     wifi_config_ui_show(false);
     wifi_success_ui_show(false);
-    uptime_kuma_ui_show(false);
+    main_ui_show(false);
     landing_page_ui_show(true);
     
     // Let the landing page show for a bit, while running the LVGL handler to play animations

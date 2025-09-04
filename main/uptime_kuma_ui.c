@@ -10,7 +10,7 @@ static lv_obj_t *tileview = NULL; // Make tileview static to access it from othe
 static void create_monitor_card(lv_obj_t *parent, const kuma_monitor_t *monitor) {
     // 卡片容器
     lv_obj_t *card = lv_obj_create(parent);
-    lv_obj_set_size(card, LV_PCT(90), LV_PCT(80));
+    lv_obj_set_size(card, LV_PCT(95), LV_PCT(90));
     lv_obj_center(card);
     lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(card, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
@@ -18,7 +18,7 @@ static void create_monitor_card(lv_obj_t *parent, const kuma_monitor_t *monitor)
     // 监控项名称
     lv_obj_t *name_label = lv_label_create(card);
     lv_label_set_text(name_label, monitor->name);
-    lv_obj_set_style_text_font(name_label, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(name_label, &lv_font_montserrat_12, 0);
 
     // 状态行容器
     lv_obj_t *status_cont = lv_obj_create(card);
@@ -30,7 +30,7 @@ static void create_monitor_card(lv_obj_t *parent, const kuma_monitor_t *monitor)
 
     // 状态指示灯
     lv_obj_t *status_led = lv_led_create(status_cont);
-    lv_obj_set_size(status_led, 20, 20);
+    lv_obj_set_size(status_led, 30, 30);
     switch (monitor->status) {
         case KUMA_MONITOR_STATUS_UP:
             lv_led_set_color(status_led, lv_palette_main(LV_PALETTE_GREEN));
@@ -46,7 +46,7 @@ static void create_monitor_card(lv_obj_t *parent, const kuma_monitor_t *monitor)
 
     // 状态文本
     lv_obj_t *status_label = lv_label_create(status_cont);
-    lv_obj_set_style_text_font(status_label, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(status_label, &lv_font_montserrat_18, 0);
     switch (monitor->status) {
         case KUMA_MONITOR_STATUS_UP:
             lv_label_set_text(status_label, "UP");
@@ -61,7 +61,7 @@ static void create_monitor_card(lv_obj_t *parent, const kuma_monitor_t *monitor)
 
     lv_obj_t *ping_label = lv_label_create(card);
     lv_label_set_text_fmt(ping_label, "Ping: %d ms", monitor->ping);
-    lv_obj_set_style_text_font(ping_label, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(ping_label, &lv_font_montserrat_16, 0);
     lv_obj_set_style_text_color(ping_label, lv_color_hex(0x8a8a8a), 0);
 }
 
@@ -71,12 +71,10 @@ void create_uptime_kuma_ui(lv_obj_t *parent) {
     } else {
         kuma_container = lv_obj_create(parent);
         lv_obj_remove_style_all(kuma_container);
-        lv_obj_set_size(kuma_container, lv_obj_get_width(parent), lv_obj_get_height(parent) - 20); // Make space for status bar
-        lv_obj_align(kuma_container, LV_ALIGN_BOTTOM_MID, 0, 0);
+        lv_obj_set_size(kuma_container, LV_PCT(100), LV_PCT(100));
         lv_obj_set_style_pad_all(kuma_container, 0, 0);
         lv_obj_set_style_border_width(kuma_container, 0, 0);
         lv_obj_clear_flag(kuma_container, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_add_flag(kuma_container, LV_OBJ_FLAG_HIDDEN); // Initially hidden
     }
     ESP_LOGI(TAG, "Uptime Kuma UI container created.");
 }
@@ -113,6 +111,7 @@ void update_uptime_kuma_ui(const kuma_monitor_list_t *monitor_list) {
     for (int i = 0; i < monitor_list->count; i++) {
         lv_obj_t *tile = lv_tileview_add_tile(tileview, i, 0, LV_DIR_HOR);
         if (tile) {
+            lv_obj_clear_flag(tile, LV_OBJ_FLAG_SCROLLABLE);
             create_monitor_card(tile, monitor_list->monitors[i]);
         }
     }
