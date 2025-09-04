@@ -1,0 +1,36 @@
+dependencies:
+  espressif/esp_lcd_touch:
+    component_hash: 779b4ba2464a3ae85681e4b860caa5fdc35801458c23f3039ee761bae7f442a4
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=4.4.2'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.1.2
+  espressif/esp_lcd_touch_ft5x06:
+    dependencies: []
+    source:
+      path: D:\Hardware\ESP32_Uptime\ESP32_Uptime\components\espressif__esp_lcd_touch_ft5x06
+      type: local
+    version: 1.0.6
+  idf:
+    source:
+      type: idf
+    version: 5.1.6
+  lvgl/lvgl:
+    component_hash: 948bff879a345149b83065535bbc4a026ce9f47498a22881e432a264b9098015
+    dependencies: []
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 8.3.11
+direct_dependencies:
+- espressif/esp_lcd_touch
+- espressif/esp_lcd_touch_ft5x06
+- idf
+- lvgl/lvgl
+manifest_hash: ebd8f0219b7146cd6d8a3f1608f33e68eddab243ebe1971ed9d2a3e8929a7348
+target: esp32c3
+version: 2.0.0
