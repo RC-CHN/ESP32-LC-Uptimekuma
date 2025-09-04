@@ -42,6 +42,7 @@
 #include "uptime_kuma_ui.h"
 #include "landing_page.h"
 #include "main_ui.h"
+#include "app_events.h"
 
 static const char *TAG = "example";
 
@@ -87,6 +88,14 @@ static void _user_interaction_cb(lv_event_t * e)
 {
     uint32_t *last_user_interaction = (uint32_t *)lv_event_get_user_data(e);
     *last_user_interaction = lv_tick_get();
+}
+
+void app_show_wifi_config_screen(void)
+{
+    ESP_LOGI(TAG, "Switching to WiFi Config UI for reconfiguration");
+    main_ui_show(false);
+    wifi_success_ui_show(false);
+    wifi_config_ui_show(true);
 }
 
 static void ui_event_handler(lv_event_t * e)

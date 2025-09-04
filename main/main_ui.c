@@ -1,9 +1,19 @@
 #include "main_ui.h"
 #include "uptime_kuma_ui.h"
 #include "esp_log.h"
+#include "app_events.h"
 
 static const char *TAG = "MAIN_UI";
 static lv_obj_t *main_container = NULL;
+
+static void reconfigure_wifi_event_cb(lv_event_t * e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    if(code == LV_EVENT_CLICKED) {
+        ESP_LOGI(TAG, "Reconfigure WiFi button clicked");
+        app_show_wifi_config_screen();
+    }
+}
 
 void create_main_ui(lv_obj_t *parent) {
     if (main_container) {
@@ -31,9 +41,15 @@ void create_main_ui(lv_obj_t *parent) {
 
     // Add a placeholder Settings tab
     lv_obj_t *settings_tab = lv_tabview_add_tab(tabview, "Settings");
-    lv_obj_t *settings_label = lv_label_create(settings_tab);
-    lv_label_set_text(settings_label, "Settings will be here.");
-    lv_obj_center(settings_label);
+    
+    // Add a button to reconfigure WiFi
+    lv_obj_t * btn = lv_btn_create(settings_tab);
+    lv_obj_add_event_cb(btn, reconfigure_wifi_event_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_align(btn, LV_ALIGN_CENTER, 0, 0);
+
+    lv_obj_t * label = lv_label_create(btn);
+    lv_label_set_text(label, "Reconfigure WiFi");
+    lv_obj_center(label);
     
     ESP_LOGI(TAG, "Main UI with TabView created.");
 }

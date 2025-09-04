@@ -1,5 +1,7 @@
 #include <string.h>
 #include "wifi_config_ui.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "esp_wifi.h"
 #include "wifi_manager.h"
 
@@ -79,7 +81,9 @@ void wifi_config_ui_show(bool show)
 {
     if (cont == NULL) return;
     if (show) {
+        vTaskDelay(pdMS_TO_TICKS(50));
         lv_obj_clear_flag(cont, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_invalidate(lv_scr_act());
     } else {
         lv_obj_add_flag(cont, LV_OBJ_FLAG_HIDDEN);
     }
