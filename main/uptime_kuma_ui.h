@@ -17,5 +17,7 @@ void create_uptime_kuma_ui(lv_obj_t *parent);
  * @param monitor_list 最新的监控数据列表
  */
 void update_uptime_kuma_ui(const kuma_monitor_list_t *monitor_list);
+void uptime_kuma_ui_show(bool show);
+void uptime_kuma_ui_carousel_next(void);
 
 #endif // UPTIME_KUMA_UI_H

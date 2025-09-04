@@ -4,6 +4,7 @@
 static const char *TAG = "KUMA_UI";
 
 static lv_obj_t *kuma_container = NULL;
+static lv_obj_t *tileview = NULL; // Make tileview static to access it from other functions
 
 // 内部函数，用于为单个监控项创建卡片UI
 static void create_monitor_card(lv_obj_t *parent, const kuma_monitor_t *monitor) {
@@ -70,9 +71,12 @@ void create_uptime_kuma_ui(lv_obj_t *parent) {
     } else {
         kuma_container = lv_obj_create(parent);
         lv_obj_remove_style_all(kuma_container);
-        lv_obj_set_size(kuma_container, LV_PCT(100), LV_PCT(100));
+        lv_obj_set_size(kuma_container, lv_obj_get_width(parent), lv_obj_get_height(parent) - 20); // Make space for status bar
+        lv_obj_align(kuma_container, LV_ALIGN_BOTTOM_MID, 0, 0);
+        lv_obj_set_style_pad_all(kuma_container, 0, 0);
+        lv_obj_set_style_border_width(kuma_container, 0, 0);
         lv_obj_clear_flag(kuma_container, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_clear_flag(kuma_container, LV_OBJ_FLAG_CLICKABLE); 
+        lv_obj_add_flag(kuma_container, LV_OBJ_FLAG_HIDDEN); // Initially hidden
     }
     ESP_LOGI(TAG, "Uptime Kuma UI container created.");
 }
@@ -83,7 +87,17 @@ void update_uptime_kuma_ui(const kuma_monitor_list_t *monitor_list) {
         return;
     }
     
+    // Store the currently active tile index before cleaning
+    uint32_t active_tile_id = 0;
+    if (tileview) {
+        lv_obj_t *active_tile = lv_tileview_get_tile_act(tileview);
+        if(active_tile) {
+            active_tile_id = lv_obj_get_index(active_tile);
+        }
+    }
+
     lv_obj_clean(kuma_container);
+    tileview = NULL; // Reset tileview
 
     if (!monitor_list || monitor_list->count == 0) {
         lv_obj_t *label = lv_label_create(kuma_container);
@@ -92,7 +106,7 @@ void update_uptime_kuma_ui(const kuma_monitor_list_t *monitor_list) {
         return;
     }
     
-    lv_obj_t *tileview = lv_tileview_create(kuma_container);
+    tileview = lv_tileview_create(kuma_container);
     lv_obj_set_size(tileview, LV_PCT(100), LV_PCT(100));
     lv_obj_align(tileview, LV_ALIGN_TOP_LEFT, 0, 0);
 
@@ -102,5 +116,36 @@ void update_uptime_kuma_ui(const kuma_monitor_list_t *monitor_list) {
             create_monitor_card(tile, monitor_list->monitors[i]);
         }
     }
+    
+    // Restore the previously active tile
+    if(active_tile_id < monitor_list->count) {
+        lv_obj_set_tile_id(tileview, active_tile_id, 0, LV_ANIM_OFF);
+    }
+
     ESP_LOGI(TAG, "Updated Kuma UI with %d monitors.", monitor_list->count);
+}
+
+void uptime_kuma_ui_carousel_next(void) {
+    if (!tileview) return;
+
+    lv_obj_t* current_tile = lv_tileview_get_tile_act(tileview);
+    if (!current_tile) return;
+
+    uint32_t current_index = lv_obj_get_index(current_tile);
+    uint32_t tile_count = lv_obj_get_child_cnt(tileview);
+    
+    if (tile_count == 0) return;
+
+    uint32_t next_index = (current_index + 1) % tile_count;
+    
+    lv_obj_set_tile_id(tileview, next_index, 0, LV_ANIM_ON);
+}
+
+void uptime_kuma_ui_show(bool show) {
+    if (kuma_container == NULL) return;
+    if (show) {
+        lv_obj_clear_flag(kuma_container, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(kuma_container, LV_OBJ_FLAG_HIDDEN);
+    }
 }

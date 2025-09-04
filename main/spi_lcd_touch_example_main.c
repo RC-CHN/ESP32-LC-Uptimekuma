@@ -40,6 +40,7 @@
 #include "ui_events.h"
 #include "uptime_kuma.h"
 #include "uptime_kuma_ui.h"
+#include "landing_page.h"
 
 static const char *TAG = "example";
 
@@ -81,6 +82,12 @@ static lv_obj_t *wifi_status_label;
 static lv_obj_t *temp_label;
 static lv_obj_t *humi_label;
 
+static void _user_interaction_cb(lv_event_t * e)
+{
+    uint32_t *last_user_interaction = (uint32_t *)lv_event_get_user_data(e);
+    *last_user_interaction = lv_tick_get();
+}
+
 static void ui_event_handler(lv_event_t * e)
 {
     lv_event_code_t code = lv_event_get_code(e);
@@ -94,7 +101,7 @@ static void ui_event_handler(lv_event_t * e)
     } else if (code == EVT_SWITCH_TO_KUMA_UI) {
         ESP_LOGI(TAG, "Switching to Uptime Kuma UI");
         wifi_success_ui_show(false);
-        create_uptime_kuma_ui(lv_scr_act());
+        uptime_kuma_ui_show(true);
 
         // Start the Kuma client task if it's not already running
         if (kuma_task_handle == NULL) {
@@ -131,7 +138,7 @@ static void wifi_status_update_cb(wifi_manager_status_t status)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////// Please update the following configuration according to your LCD spec //////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#define EXAMPLE_LCD_PIXEL_CLOCK_HZ     (20 * 1000 * 1000)
+#define EXAMPLE_LCD_PIXEL_CLOCK_HZ     (40 * 1000 * 1000)
 #define EXAMPLE_LCD_BK_LIGHT_ON_LEVEL  0
 #define EXAMPLE_LCD_BK_LIGHT_OFF_LEVEL !EXAMPLE_LCD_BK_LIGHT_ON_LEVEL
 #define EXAMPLE_PIN_NUM_SCLK           3
@@ -251,7 +258,7 @@ static void example_lvgl_touch_cb(lv_indev_drv_t * drv, lv_indev_data_t * data)
         data->point.x = touchpad_x[0];
         data->point.y = touchpad_y[0];
         data->state = LV_INDEV_STATE_PRESSED;
-        ESP_LOGI(TAG, "Touch: PRESSED at x=%d, y=%d", data->point.x, data->point.y);
+        //ESP_LOGI(TAG, "Touch: PRESSED at x=%d, y=%d", data->point.x, data->point.y);
     } else {
         data->state = LV_INDEV_STATE_RELEASED;
     }
@@ -453,26 +460,48 @@ void app_main(void)
 
     create_wifi_config_ui(disp);
     create_wifi_success_ui(lv_scr_act());
-    // Create the container for Kuma UI, but don't populate it yet
     create_uptime_kuma_ui(lv_scr_act());
+    create_landing_page_ui(lv_scr_act());
 
-    wifi_config_ui_show(false); // Initially hide config ui, let the auto connect decide
+    // Initially, show only the landing page
+    wifi_config_ui_show(false);
+    wifi_success_ui_show(false);
+    uptime_kuma_ui_show(false);
+    landing_page_ui_show(true);
     
+    // Let the landing page show for a bit, while running the LVGL handler to play animations
+    ESP_LOGI(TAG, "Showing landing page for 1.5 seconds...");
+    uint32_t landing_start_time = lv_tick_get();
+    while (lv_tick_get() - landing_start_time < 1500) {
+        lv_timer_handler();
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+    landing_page_ui_show(false);
+    ESP_LOGI(TAG, "Landing page hidden.");
+
+
     bool auto_connect_attempted = false;
     uint32_t last_sensor_update = 0;
+    uint32_t last_user_interaction = 0;
+    uint32_t last_carousel_update = 0;
+    bool carousel_active = false;
+
+    // Register a callback to detect user interaction
+    lv_obj_add_event_cb(lv_scr_act(),_user_interaction_cb, LV_EVENT_PRESSED, &last_user_interaction);
+
+
     while (1) {
+        // --- Auto-connect logic ---
         if (!auto_connect_attempted) {
-            ESP_LOGI(TAG, "Waiting 2 seconds before attempting auto-connect...");
-            vTaskDelay(pdMS_TO_TICKS(2000));
             ESP_LOGI(TAG, "Attempting to connect with stored credentials...");
             if (!wifi_manager_load_sta_config_and_connect()) {
-                // If no credentials, show disconnected state and show the config screen
-                 wifi_status_update_cb(WIFI_STATUS_DISCONNECTED);
+                wifi_status_update_cb(WIFI_STATUS_DISCONNECTED);
             }
             auto_connect_attempted = true;
+            last_user_interaction = lv_tick_get(); // Start the timer after setup
         }
 
-        // Update sensor data every 2 seconds
+        // --- Sensor update logic ---
         if (lv_tick_get() - last_sensor_update > 2000) {
             if (gxhtc3_get_tah() == ESP_OK) {
                 char temp_str[10];
@@ -485,9 +514,32 @@ void app_main(void)
             last_sensor_update = lv_tick_get();
         }
 
-        // raise the task priority of LVGL and/or reduce the handler period can improve the performance
-        vTaskDelay(pdMS_TO_TICKS(10));
-        // The task running lv_timer_handler should have lower priority than that running `lv_tick_inc`
+        // --- Carousel logic ---
+        uint32_t now = lv_tick_get();
+        if (!carousel_active && (now - last_user_interaction > 30000)) {
+            ESP_LOGI(TAG, "User idle for 30s, starting carousel.");
+            carousel_active = true;
+            last_carousel_update = now;
+            uptime_kuma_ui_carousel_next(); // Switch to the first one immediately
+        }
+
+        if (carousel_active) {
+            if (now - last_carousel_update > 10000) {
+                 ESP_LOGI(TAG, "Carousel updating to next slide.");
+                 uptime_kuma_ui_carousel_next();
+                 last_carousel_update = now;
+            }
+        }
+        
+        if (carousel_active && lv_indev_get_act() && lv_indev_get_gesture_dir(lv_indev_get_act()) != LV_DIR_NONE) {
+            ESP_LOGI(TAG, "User interaction detected, stopping carousel.");
+            carousel_active = false;
+            last_user_interaction = now;
+        }
+
+
+        // --- LVGL Handler ---
+        vTaskDelay(pdMS_TO_TICKS(5));
         lv_timer_handler();
     }
 }
